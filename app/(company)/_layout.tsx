@@ -3,28 +3,11 @@ import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from
 import { useRouter, Slot } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import CompanyTutorial from '@/components/tutorial/CompanyTutorial';
-import {
-  Home,
-  FileText,
-  Users,
-  Inbox,
-  Calendar,
-  MessageCircle,
-  Building2,
-  BarChart3,
-  Star,
-  Settings,
-  LogOut,
-  Bell,
-  Menu,
-  X,
-  ChevronRight,
-  Moon,
-  Sun,
-  CheckCircle,
-} from 'lucide-react-native';
+import { DemoAlert } from '@/components/ui/DemoAlert';
+import { Hop as Home, FileText, Users, Inbox, Calendar, MessageCircle, Building2, ChartBar as BarChart3, Star, Settings, LogOut, Bell, Menu, X, ChevronRight, Moon, Sun, CircleCheck as CheckCircle, Eye } from 'lucide-react-native';
 import { useTheme } from '@/contexts';
 import { useAuth } from '@/contexts';
+import { useDemo } from '@/contexts/DemoContext';
 import { useNotifications } from '@/hooks';
 import { Avatar, Badge } from '@/components/ui';
 import { Spacing } from '@/constants';
@@ -35,41 +18,49 @@ const menuItems = [
   { id: 'home', label: 'Inicio', icon: Home, route: '/(company)' },
   { id: 'vacancies', label: 'Vacantes', icon: FileText, route: '/(company)/vacancies' },
   { id: 'talent', label: 'Talento', icon: Users, route: '/(company)/talent' },
-  { id: 'applications', label: 'Postulaciones', icon: Inbox, route: '/(company)/applications' },
-  { id: 'interviews', label: 'Entrevistas', icon: Calendar, route: '/(company)/interviews' },
-  { id: 'messages', label: 'Mensajes', icon: MessageCircle, route: '/(company)/messages' },
+  { id: 'applications', label: 'Postulaciones', icon: Inbox, route: '/(company)/applications', requiresAuth: true },
+  { id: 'interviews', label: 'Entrevistas', icon: Calendar, route: '/(company)/interviews', requiresAuth: true },
+  { id: 'messages', label: 'Mensajes', icon: MessageCircle, route: '/(company)/messages', requiresAuth: true },
   { id: 'company', label: 'Mi Empresa', icon: Building2, route: '/(company)/info' },
   { id: 'analytics', label: 'Estadísticas', icon: BarChart3, route: '/(company)/analytics' },
-  { id: 'promotions', label: 'Promociones', icon: Star, route: '/(company)/promotions' },
+  { id: 'promotions', label: 'Promociones', icon: Star, route: '/(company)/promotions', requiresAuth: true },
 ];
 
 export default function CompanyLayout() {
   const router = useRouter();
   const { theme, isDark, toggleTheme } = useTheme();
   const { user, profile, signOut } = useAuth();
+  const { isDemo, exitDemoMode, showDemoAlert } = useDemo();
   const { unreadCount } = useNotifications();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState('/(company)');
 
   const companyProfile = profile as any;
 
-  const handleNavigate = (route: string) => {
+  const handleNavigate = (route: string, requiresAuth?: boolean) => {
+    if (isDemo && requiresAuth) {
+      showDemoAlert();
+      setDrawerOpen(false);
+      return;
+    }
     setCurrentRoute(route);
     router.push(route as any);
     setDrawerOpen(false);
   };
 
   const handleSignOut = async () => {
+    if (isDemo) {
+      exitDemoMode();
+      router.replace('/welcome');
+      return;
+    }
     await signOut();
     router.replace('/welcome');
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  };
+  // Demo mode mock data
+  const displayName = isDemo ? 'Empresa Demo' : (companyProfile?.name || 'Mi Empresa');
+  const displayLogo = isDemo ? null : companyProfile?.logo_url;
 
   const DrawerContent = () => (
     <View style={[styles.drawer, { backgroundColor: theme.colors.background }]}>
@@ -82,17 +73,23 @@ export default function CompanyLayout() {
           <X size={24} color="#FFFFFF" />
         </TouchableOpacity>
 
+        {/* Demo Badge */}
+        {isDemo && (
+          <View style={styles.demoBadge}>
+            <Eye size={12} color="#FFFFFF" />
+            <Text style={styles.demoBadgeText}>MODO DEMO</Text>
+          </View>
+        )}
+
         <View style={styles.drawerProfile}>
           <Avatar
-            source={companyProfile?.logo_url}
-            name={companyProfile?.name || 'Empresa'}
+            source={displayLogo}
+            name={isDemo ? 'Demo' : (companyProfile?.name || 'Empresa')}
             size={60}
           />
           <View style={styles.drawerProfileInfo}>
-            <Text style={styles.drawerName}>
-              {companyProfile?.name || 'Mi Empresa'}
-            </Text>
-            {companyProfile?.verified && (
+            <Text style={styles.drawerName}>{displayName}</Text>
+            {!isDemo && companyProfile?.verified && (
               <View style={styles.verifiedBadge}>
                 <CheckCircle size={14} color={theme.colors.success[500]} />
                 <Text style={[styles.verifiedText, { color: theme.colors.success[500] }]}>
@@ -116,7 +113,7 @@ export default function CompanyLayout() {
               styles.menuItem,
               currentRoute === item.route && { backgroundColor: theme.colors.primary[50] },
             ]}
-            onPress={() => handleNavigate(item.route)}
+            onPress={() => handleNavigate(item.route, item.requiresAuth)}
           >
             <item.icon
               size={22}
@@ -130,7 +127,12 @@ export default function CompanyLayout() {
             >
               {item.label}
             </Text>
-            {item.id === 'messages' && unreadCount > 0 && (
+            {item.requiresAuth && isDemo && (
+              <View style={styles.lockIcon}>
+                <Text style={styles.lockIconText}>🔐</Text>
+              </View>
+            )}
+            {item.id === 'messages' && unreadCount > 0 && !isDemo && (
               <Badge text={unreadCount.toString()} variant="error" size="sm" />
             )}
             <ChevronRight size={18} color={theme.colors.textTertiary} />
@@ -143,12 +145,17 @@ export default function CompanyLayout() {
         </Text>
         <TouchableOpacity
           style={styles.menuItem}
-          onPress={() => handleNavigate('/(company)/settings')}
+          onPress={() => handleNavigate('/(company)/settings', true)}
         >
           <Settings size={22} color={theme.colors.textSecondary} />
           <Text style={[styles.menuLabel, { color: theme.colors.text }]}>
             Configuración
           </Text>
+          {isDemo && (
+            <View style={styles.lockIcon}>
+              <Text style={styles.lockIconText}>🔐</Text>
+            </View>
+          )}
           <ChevronRight size={18} color={theme.colors.textTertiary} />
         </TouchableOpacity>
 
@@ -171,7 +178,7 @@ export default function CompanyLayout() {
         >
           <LogOut size={22} color={theme.colors.error[500]} />
           <Text style={[styles.menuLabel, { color: theme.colors.error[500] }]}>
-            Cerrar sesión
+            {isDemo ? 'Salir del modo demo' : 'Cerrar sesión'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
@@ -188,6 +195,14 @@ export default function CompanyLayout() {
   return (
     <SafeAreaProvider>
       <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
+        {/* Demo Mode Banner */}
+        {isDemo && (
+          <View style={styles.demoBanner}>
+            <Eye size={14} color="#FFFFFF" />
+            <Text style={styles.demoBannerText}>Modo demostración - Algunas acciones requieren registro</Text>
+          </View>
+        )}
+
         {/* Header */}
         <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
           <TouchableOpacity
@@ -206,7 +221,7 @@ export default function CompanyLayout() {
             onPress={() => router.push('/(company)/notifications')}
           >
             <Bell size={24} color={theme.colors.text} />
-            {unreadCount > 0 && (
+            {unreadCount > 0 && !isDemo && (
               <View style={[styles.badgeDot, { backgroundColor: theme.colors.error[500] }]}>
                 <Text style={styles.badgeText}>{unreadCount}</Text>
               </View>
@@ -231,7 +246,10 @@ export default function CompanyLayout() {
         <Slot />
 
         {/* First-time tutorial */}
-        {user && <CompanyTutorial userId={user.id} />}
+        {user && !isDemo && <CompanyTutorial userId={user.id} />}
+
+        {/* Demo Alert Modal */}
+        <DemoAlert />
       </SafeAreaView>
     </SafeAreaProvider>
   );
@@ -240,6 +258,20 @@ export default function CompanyLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+  },
+  demoBanner: {
+    backgroundColor: '#7B1FA2',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    gap: 6,
+  },
+  demoBannerText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '500',
   },
   header: {
     flexDirection: 'row',
@@ -316,6 +348,24 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
   },
+  demoBadge: {
+    position: 'absolute',
+    top: Spacing.lg,
+    left: Spacing.lg,
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.2)',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+    gap: 4,
+  },
+  demoBadgeText: {
+    color: '#FFFFFF',
+    fontSize: 10,
+    fontWeight: '700',
+    letterSpacing: 0.5,
+  },
   drawerProfile: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -359,6 +409,12 @@ const styles = StyleSheet.create({
     flex: 1,
     marginLeft: Spacing.md,
     fontSize: 15,
+  },
+  lockIcon: {
+    marginRight: 4,
+  },
+  lockIconText: {
+    fontSize: 12,
   },
   signOutButton: {
     marginTop: Spacing.md,

@@ -4,6 +4,8 @@ import { useRouter } from 'expo-router';
 import { MapPin, TrendingUp, Clock, ChevronRight, Search, Briefcase, GraduationCap, Calendar, Users } from 'lucide-react-native';
 import { useTheme } from '@/contexts';
 import { useAuth } from '@/contexts';
+import { useDemo } from '@/contexts/DemoContext';
+import { useDemoRestriction } from '@/hooks';
 import { Card, Avatar, Badge, SearchBar, Button } from '@/components/ui';
 import { Spacing } from '@/constants';
 import { supabase } from '@/lib/supabase';
@@ -12,6 +14,8 @@ export default function WorkerHomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user, profile } = useAuth();
+  const { isDemo } = useDemo();
+  const { checkAndProceed } = useDemoRestriction();
   const [refreshing, setRefreshing] = useState(false);
   const [jobs, setJobs] = useState<any[]>([]);
   const [courses, setCourses] = useState<any[]>([]);
@@ -19,6 +23,10 @@ export default function WorkerHomeScreen() {
   const [searchQuery, setSearchQuery] = useState('');
 
   const workerProfile = profile as any;
+
+  // Demo mode mock data
+  const displayName = isDemo ? 'Usuario Demo' : (workerProfile?.first_name || 'Usuario');
+  const displayPhoto = isDemo ? null : workerProfile?.photo_url;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
@@ -72,7 +80,11 @@ export default function WorkerHomeScreen() {
     fetchHomeData();
   }, []);
 
-  const stats = [
+  const stats = isDemo ? [
+    { label: 'Empleos nuevos', value: '15', color: theme.colors.primary[500] },
+    { label: 'Explorando', value: '1', color: theme.colors.secondary[500] },
+    { label: 'Modo demo', value: 'Activo', color: theme.colors.success[500] },
+  ] : [
     { label: 'Empleos nuevos', value: '15', color: theme.colors.primary[500] },
     { label: 'Postulaciones', value: '3', color: theme.colors.secondary[500] },
     { label: 'Vistas perfil', value: '8', color: theme.colors.success[500] },
@@ -98,12 +110,12 @@ export default function WorkerHomeScreen() {
               {getGreeting()},
             </Text>
             <Text style={[styles.userName, { color: theme.colors.text }]}>
-              {workerProfile?.first_name || 'Usuario'}
+              {displayName}
             </Text>
           </View>
           <Avatar
-            source={workerProfile?.photo_url}
-            name={workerProfile ? `${workerProfile.first_name} ${workerProfile.last_name}` : 'Usuario'}
+            source={displayPhoto}
+            name={isDemo ? 'Demo' : (workerProfile ? `${workerProfile.first_name} ${workerProfile.last_name}` : 'Usuario')}
             size={50}
           />
         </View>
@@ -284,13 +296,23 @@ export default function WorkerHomeScreen() {
           <TrendingUp size={24} color={theme.colors.primary[500]} />
           <View style={styles.tipContent}>
             <Text style={[styles.tipTitle, { color: theme.colors.primary[700] }]}>
-              Completa tu perfil
+              {isDemo ? 'Crea tu cuenta' : 'Completa tu perfil'}
             </Text>
             <Text style={[styles.tipDesc, { color: theme.colors.primary[600] }]}>
-              Un perfil completo aumenta tus posibilidades de ser contratado
+              {isDemo ? 'Registrate para acceder a todas las funciones' : 'Un perfil completo aumenta tus posibilidades de ser contratado'}
             </Text>
           </View>
-          <Button title="Mejorar" size="sm" onPress={() => router.push('/(worker)/profile')} />
+          <Button
+            title={isDemo ? 'Registrarse' : 'Mejorar'}
+            size="sm"
+            onPress={() => {
+              if (isDemo) {
+                router.push('/register');
+              } else {
+                router.push('/(worker)/profile');
+              }
+            }}
+          />
         </Card>
       </View>
 

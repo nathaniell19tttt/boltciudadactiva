@@ -1,23 +1,10 @@
 import { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Dimensions } from 'react-native';
 import { useRouter } from 'expo-router';
-import {
-  FileText,
-  Users,
-  Calendar,
-  Megaphone,
-  TrendingUp,
-  Eye,
-  UserPlus,
-  Briefcase,
-  CheckCircle,
-  ChevronRight,
-  MapPin,
-  Star,
-  Inbox,
-} from 'lucide-react-native';
+import { FileText, Users, Calendar, Megaphone, TrendingUp, Eye, UserPlus, Briefcase, CircleCheck as CheckCircle, ChevronRight, MapPin, Star, Inbox } from 'lucide-react-native';
 import { useTheme } from '@/contexts';
 import { useAuth } from '@/contexts';
+import { useDemo } from '@/contexts/DemoContext';
 import { Card, Avatar, Badge, SearchBar, Button } from '@/components/ui';
 import { Spacing } from '@/constants';
 import { supabase } from '@/lib/supabase';
@@ -28,6 +15,7 @@ export default function CompanyHomeScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user, profile } = useAuth();
+  const { isDemo } = useDemo();
   const [refreshing, setRefreshing] = useState(false);
   const [stats, setStats] = useState({
     activeJobs: 0,
@@ -40,7 +28,22 @@ export default function CompanyHomeScreen() {
 
   const companyProfile = profile as any;
 
+  // Demo mode mock data
+  const displayName = isDemo ? 'Empresa Demo' : (companyProfile?.name || 'Mi Empresa');
+  const displayLogo = isDemo ? null : companyProfile?.logo_url;
+
   const fetchData = async () => {
+    if (isDemo) {
+      // Demo mode static data
+      setStats({
+        activeJobs: 5,
+        applications: 12,
+        interviews: 3,
+        views: 150,
+      });
+      return;
+    }
+
     if (!companyProfile?.id) return;
 
     try {
@@ -98,7 +101,36 @@ export default function CompanyHomeScreen() {
     return 'Buenas noches';
   };
 
-  const quickActions = [
+  const quickActions = isDemo ? [
+    {
+      label: 'Ver vacantes',
+      description: 'Explora ofertas de trabajo',
+      icon: FileText,
+      route: '/(company)/vacancies',
+      color: theme.colors.primary[500],
+    },
+    {
+      label: 'Buscar talento',
+      description: 'Encuentra el candidato ideal',
+      icon: Users,
+      route: '/(company)/talent',
+      color: theme.colors.secondary[500],
+    },
+    {
+      label: 'Ver estadisticas',
+      description: 'Metricas de la plataforma',
+      icon: Eye,
+      route: '/(company)/analytics',
+      color: theme.colors.success[500],
+    },
+    {
+      label: 'Mi empresa',
+      description: 'Informacion del negocio',
+      icon: Briefcase,
+      route: '/(company)/info',
+      color: theme.colors.info[500],
+    },
+  ] : [
     {
       label: 'Publicar vacante',
       description: 'Crea una nueva oferta de trabajo',
@@ -159,21 +191,30 @@ export default function CompanyHomeScreen() {
               {getGreeting()},
             </Text>
             <Text style={[styles.userName, { color: theme.colors.text }]}>
-              {companyProfile?.name || 'Mi Empresa'}
+              {displayName}
             </Text>
           </View>
           <Avatar
-            source={companyProfile?.logo_url}
-            name={companyProfile?.name || 'Empresa'}
+            source={displayLogo}
+            name={isDemo ? 'Demo' : (companyProfile?.name || 'Empresa')}
             size={50}
           />
         </View>
 
-        {companyProfile?.verified && (
+        {!isDemo && companyProfile?.verified && (
           <View style={[styles.verifiedBanner, { backgroundColor: theme.colors.success[50] }]}>
             <CheckCircle size={18} color={theme.colors.success[600]} />
             <Text style={[styles.verifiedText, { color: theme.colors.success[700] }]}>
               Empresa verificada
+            </Text>
+          </View>
+        )}
+
+        {isDemo && (
+          <View style={[styles.verifiedBanner, { backgroundColor: '#F3E5F5' }]}>
+            <Eye size={18} color="#7B1FA2" />
+            <Text style={[styles.verifiedText, { color: '#7B1FA2' }]}>
+              Modo demostracion - navegacion libre
             </Text>
           </View>
         )}
@@ -311,14 +352,23 @@ export default function CompanyHomeScreen() {
       <View style={styles.section}>
         <View style={styles.sectionHeader}>
           <Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-            Postulaciones recientes
+            {isDemo ? 'Ejemplo de postulaciones' : 'Postulaciones recientes'}
           </Text>
-          <TouchableOpacity onPress={() => router.push('/(company)/applications')}>
-            <Text style={[styles.seeAll, { color: theme.colors.primary[500] }]}>Ver todas</Text>
-          </TouchableOpacity>
+          {!isDemo && (
+            <TouchableOpacity onPress={() => router.push('/(company)/applications')}>
+              <Text style={[styles.seeAll, { color: theme.colors.primary[500] }]}>Ver todas</Text>
+            </TouchableOpacity>
+          )}
         </View>
 
-        {recentApplications.length > 0 ? (
+        {isDemo ? (
+          <Card style={styles.emptyState}>
+            <Inbox size={32} color={theme.colors.textTertiary} />
+            <Text style={[styles.emptyText, { color: theme.colors.textSecondary }]}>
+              Registrate para recibir postulaciones
+            </Text>
+          </Card>
+        ) : recentApplications.length > 0 ? (
           recentApplications.map((app) => (
             <TouchableOpacity key={app.id} onPress={() => router.push(`/(company)/talent/${app.worker_id}`)}>
               <Card style={styles.appCard}>
@@ -357,18 +407,18 @@ export default function CompanyHomeScreen() {
 
       {/* CTA Banner */}
       <View style={styles.section}>
-        <Card style={[styles.ctaBanner, { backgroundColor: theme.colors.primary[500] }]}>
+        <Card style={[styles.ctaBanner, { backgroundColor: isDemo ? '#7B1FA2' : theme.colors.primary[500] }]}>
           <View style={styles.ctaContent}>
             <Text style={styles.ctaTitle}>
-              ¿Necesitas más visibilidad?
+              {isDemo ? 'Registra tu empresa' : 'Necesitas mas visibilidad?'}
             </Text>
             <Text style={styles.ctaDesc}>
-              Destaca tu empresa y llega a más candidatos
+              {isDemo ? 'Crea tu cuenta para publicar vacantes y encontrar talento' : 'Destaca tu empresa y llega a mas candidatos'}
             </Text>
           </View>
           <Button
-            title="Promocionar ahora"
-            onPress={() => router.push('/(company)/promotions')}
+            title={isDemo ? 'Crear cuenta' : 'Promocionar ahora'}
+            onPress={() => router.push(isDemo ? '/register' : '/(company)/promotions')}
             style={styles.ctaButton}
           />
         </Card>

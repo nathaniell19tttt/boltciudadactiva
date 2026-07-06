@@ -2,7 +2,7 @@ import { useEffect } from 'react';
 import { Stack } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useFrameworkReady } from '@/hooks/useFrameworkReady';
-import { ThemeProvider, AuthProvider } from '@/contexts';
+import { ThemeProvider, AuthProvider, DemoProvider } from '@/contexts';
 
 export default function RootLayout() {
   useFrameworkReady();
@@ -10,7 +10,8 @@ export default function RootLayout() {
   return (
     <ThemeProvider>
       <AuthProvider>
-        <Stack screenOptions={{ headerShown: false }}>
+        <DemoProvider>
+          <Stack screenOptions={{ headerShown: false }}>
           <Stack.Screen name="index" />
           <Stack.Screen name="welcome" />
           <Stack.Screen name="login" />
@@ -32,6 +33,7 @@ export default function RootLayout() {
           <Stack.Screen name="+not-found" />
         </Stack>
         <StatusBar style="auto" />
+        </DemoProvider>
       </AuthProvider>
     </ThemeProvider>
   );
