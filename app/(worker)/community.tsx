@@ -65,19 +65,32 @@ export default function CommunityScreen() {
     }
   };
 
-  const handleLike = async (postId: string, liked: boolean) => {
+  const handleLike = async (postId: string, currentlyLiked: boolean) => {
     if (!user) return;
 
-    // Incrementar o decrementar likes_count
-    const post = posts.find(p => p.id === postId);
-    const newCount = (post?.likes_count || 0) + (liked ? -1 : 1);
+    try {
+      if (currentlyLiked) {
+        // Remove like
+        await supabase
+          .from('post_likes')
+          .delete()
+          .eq('post_id', postId)
+          .eq('user_id', user.id);
 
-    await supabase
-      .from('community_posts')
-      .update({ likes_count: newCount })
-      .eq('id', postId);
+        await supabase.rpc('decrement_post_likes', { post_id: postId });
+      } else {
+        // Add like (ignore conflict if already liked)
+        await supabase
+          .from('post_likes')
+          .upsert({ post_id: postId, user_id: user.id }, { onConflict: 'post_id,user_id' });
 
-    fetchPosts();
+        await supabase.rpc('increment_post_likes', { post_id: postId });
+      }
+
+      fetchPosts();
+    } catch (err) {
+      console.error('Error toggling like:', err);
+    }
   };
 
   const formatTime = (date: string) => {

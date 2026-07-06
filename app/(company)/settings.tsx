@@ -25,19 +25,24 @@ export default function CompanySettingsScreen() {
     }
 
     try {
-      // Delete company profile
+      // Delete company profile data first
       await supabase
         .from('company_profiles')
         .delete()
         .eq('user_id', user?.id ?? '');
 
-      // Delete auth user (this will cascade)
-      await supabase.auth.admin.deleteUser(user?.id ?? '');
+      // Remove user record from public users table
+      await supabase
+        .from('users')
+        .delete()
+        .eq('id', user?.id ?? '');
 
-      Alert.alert('Cuenta eliminada', 'Tu cuenta ha sido eliminada permanentemente');
-      signOut();
+      // Sign out — auth user deletion requires a server-side function;
+      // profile data is removed and session is terminated.
+      await signOut();
+      Alert.alert('Cuenta eliminada', 'Tu información ha sido eliminada y tu sesión ha sido cerrada.');
     } catch (err) {
-      Alert.alert('Error', 'No se pudo eliminar la cuenta. Contacta soporte.');
+      Alert.alert('Error', 'No se pudo eliminar la cuenta. Por favor contacta soporte.');
     }
   };
 

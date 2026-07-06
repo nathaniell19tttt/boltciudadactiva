@@ -116,7 +116,7 @@ export default function EventsScreen() {
           <Button
             title="Inscribirse"
             size="sm"
-            onPress={() => {}}
+            onPress={() => router.push(`/(worker)/events/${event.id}` as any)}
           />
         </View>
       </Card>

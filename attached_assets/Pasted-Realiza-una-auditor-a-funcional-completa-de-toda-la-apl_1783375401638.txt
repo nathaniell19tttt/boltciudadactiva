@@ -1,0 +1,139 @@
+Realiza una auditoría funcional completa de toda la aplicación.
+
+No quiero únicamente revisar el código.
+
+Quiero comprobar que cada funcionalidad realmente funcione de principio a fin.
+
+Verifica una por una las siguientes funciones:
+
+## Autenticación
+
+* Registro de Trabajador.
+* Registro de Empresa.
+* Inicio de sesión.
+* Cierre de sesión.
+* Recuperación de contraseña.
+* Código OTP.
+* Reenvío del código.
+* Validaciones.
+* Persistencia de sesión.
+* Redirección correcta según el tipo de usuario.
+* Restricción para impedir que un mismo correo pueda registrarse como Trabajador y Empresa.
+
+## Dashboard Trabajador
+
+* Todas las tarjetas.
+* Todas las estadísticas.
+* Todos los botones.
+* Todas las rutas.
+* Todos los filtros.
+* Todas las búsquedas.
+* Todos los formularios.
+
+## Dashboard Empresa
+
+* Crear vacantes.
+* Editar vacantes.
+* Eliminar vacantes.
+* Ver postulantes.
+* Gestión de eventos.
+* Gestión de cursos.
+* Gestión de publicaciones.
+* Gestión del perfil.
+
+## Perfil
+
+* Editar datos.
+* Cambiar foto.
+* Guardar cambios.
+* Validaciones.
+
+## Chat
+
+* Enviar mensajes.
+* Recibir mensajes.
+* Actualización en tiempo real.
+* Estados de lectura.
+* Notificaciones.
+
+## Notificaciones
+
+* Generación.
+* Lectura.
+* Eliminación.
+* Persistencia.
+
+## Cursos
+
+* Crear.
+* Editar.
+* Eliminar.
+* Inscripción.
+* Finalización.
+
+## Eventos
+
+* Crear.
+* Editar.
+* Eliminar.
+* Registro.
+* Asistencia.
+
+## Reciclaje
+
+* Publicaciones.
+* Mapa.
+* Ubicaciones.
+* Marcadores.
+* Formularios.
+
+## Base de datos
+
+Verifica que todas las consultas a Supabase funcionen correctamente.
+
+Comprueba que todas las tablas, relaciones, índices, triggers, funciones SQL y políticas RLS sean compatibles con la aplicación.
+
+Si encuentras cualquier problema, corrígelo automáticamente.
+
+## Navegación
+
+Comprueba absolutamente todas las rutas.
+
+Ningún botón debe terminar en una pantalla vacía, una pantalla inexistente o un error 404.
+
+## Responsive
+
+Verifica el funcionamiento en:
+
+* Android.
+* iPhone.
+* Tablets.
+* Pantallas pequeñas.
+* Pantallas grandes.
+
+No debe existir:
+
+* Scroll horizontal.
+* Componentes cortados.
+* Texto fuera de pantalla.
+* Botones deformados.
+* Espacios vacíos.
+
+## Rendimiento
+
+Optimiza únicamente si existe un problema real.
+
+No modifiques el diseño.
+
+No cambies los colores.
+
+No cambies la experiencia de usuario.
+
+No elimines ninguna funcionalidad.
+
+Al finalizar genera un informe indicando:
+
+* Qué funciones fueron verificadas.
+* Qué errores encontraste.
+* Qué errores corregiste.
+* Qué funciones aún requieren configuración externa (Google, LinkedIn, SMTP, Google Maps, etc.).

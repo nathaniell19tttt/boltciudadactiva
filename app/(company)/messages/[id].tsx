@@ -38,18 +38,33 @@ export default function CompanyChatScreen() {
 
       if (!error && data) {
         setMessages(data);
+      }
 
-        const otherId = data[0]?.sender_id === user.id ? data[0].receiver_id : data[0]?.sender_id;
-        if (otherId) {
-          const { data: worker } = await supabase
-            .from('worker_profiles')
-            .select('*')
-            .eq('user_id', otherId)
-            .single();
+      // Resolve other participant — use messages first, fall back to conversation table
+      let otherId: string | null = null;
+      if (data && data.length > 0) {
+        otherId = data[0].sender_id === user.id ? data[0].receiver_id : data[0].sender_id;
+      } else {
+        // No messages yet: read participants from conversations table
+        const { data: conv } = await supabase
+          .from('conversations')
+          .select('participant_1, participant_2')
+          .eq('id', id)
+          .single();
+        if (conv) {
+          otherId = conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+        }
+      }
 
-          if (worker) {
-            setOtherUser(worker);
-          }
+      if (otherId) {
+        const { data: worker } = await supabase
+          .from('worker_profiles')
+          .select('*')
+          .eq('user_id', otherId)
+          .single();
+
+        if (worker) {
+          setOtherUser(worker);
         }
       }
     } catch (err) {

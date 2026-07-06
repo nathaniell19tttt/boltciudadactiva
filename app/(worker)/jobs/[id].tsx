@@ -22,6 +22,7 @@ export default function JobDetailScreen() {
   const [loading, setLoading] = useState(true);
   const [hasApplied, setHasApplied] = useState(false);
   const [isSaved, setIsSaved] = useState(false);
+  const [savedItemId, setSavedItemId] = useState<string | null>(null);
 
   useEffect(() => {
     fetchJobDetails();
@@ -55,6 +56,19 @@ export default function JobDetailScreen() {
               .eq('worker_id', worker.id)
               .single();
             setHasApplied(!!app);
+
+            // Check if already saved
+            const { data: saved } = await supabase
+              .from('saved_items')
+              .select('id')
+              .eq('user_id', user.id)
+              .eq('item_id', id)
+              .eq('item_type', 'job')
+              .single();
+            if (saved) {
+              setIsSaved(true);
+              setSavedItemId(saved.id);
+            }
           }
         }
 
@@ -125,7 +139,21 @@ export default function JobDetailScreen() {
   };
 
   const handleSave = async () => {
-    setIsSaved(!isSaved);
+    if (!user) {
+      Alert.alert('Inicia sesión', 'Debes iniciar sesión para guardar empleos');
+      return;
+    }
+    if (isSaved && savedItemId) {
+      const { error } = await supabase.from('saved_items').delete().eq('id', savedItemId);
+      if (!error) { setIsSaved(false); setSavedItemId(null); }
+    } else {
+      const { data, error } = await supabase.from('saved_items').insert({
+        user_id: user.id,
+        item_id: id,
+        item_type: 'job',
+      }).select('id').single();
+      if (!error && data) { setIsSaved(true); setSavedItemId(data.id); }
+    }
   };
 
   const handleReport = () => {

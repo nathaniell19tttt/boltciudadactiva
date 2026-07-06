@@ -1,33 +1,109 @@
 import { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl, Image } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, RefreshControl } from 'react-native';
 import { useRouter } from 'expo-router';
-import { MessageCircle, Send, Image as ImageIcon, MapPin, Paperclip, Mic } from 'lucide-react-native';
+import { MessageCircle } from 'lucide-react-native';
 import { useTheme } from '@/contexts';
 import { useAuth } from '@/contexts';
-import { Card, Avatar, Badge, Input, Button } from '@/components/ui';
+import { Avatar, Badge } from '@/components/ui';
 import { Spacing } from '@/constants';
 import { supabase } from '@/lib/supabase';
+
+interface EnrichedConversation {
+  id: string;
+  updated_at: string;
+  otherName: string;
+  otherAvatar: string | null;
+  lastMessage: string;
+  unreadCount: number;
+  participants: string[];
+}
 
 export default function MessagesScreen() {
   const router = useRouter();
   const { theme } = useTheme();
   const { user } = useAuth();
-  const [conversations, setConversations] = useState<any[]>([]);
+  const [conversations, setConversations] = useState<EnrichedConversation[]>([]);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchConversations = async () => {
     if (!user) return;
 
     try {
-      const { data, error } = await supabase
+      // 1. Fetch conversations where user is a participant (either seat)
+      const { data: convData, error } = await supabase
         .from('conversations')
         .select('*')
-        .contains('participants', [user.id])
+        .or(`participant_1.eq.${user.id},participant_2.eq.${user.id}`)
         .order('updated_at', { ascending: false });
 
-      if (!error && data) {
-        setConversations(data);
-      }
+      if (error || !convData) return;
+
+      // 2. For each conversation enrich with other participant's profile + last message
+      const enriched = await Promise.all(
+        convData.map(async (conv) => {
+          const otherId: string | null =
+            conv.participant_1 === user.id ? conv.participant_2 : conv.participant_1;
+
+          let otherName = 'Usuario';
+          let otherAvatar: string | null = null;
+
+          if (otherId) {
+            // Worker-to-company: try company_profiles first
+            const { data: company } = await supabase
+              .from('company_profiles')
+              .select('name, logo_url')
+              .eq('user_id', otherId)
+              .single();
+            if (company) {
+              otherName = company.name || 'Empresa';
+              otherAvatar = company.logo_url || null;
+            } else {
+              const { data: worker } = await supabase
+                .from('worker_profiles')
+                .select('first_name, last_name, photo_url')
+                .eq('user_id', otherId)
+                .single();
+              if (worker) {
+                otherName = `${worker.first_name || ''} ${worker.last_name || ''}`.trim() || 'Usuario';
+                otherAvatar = worker.photo_url || null;
+              }
+            }
+          }
+
+          // Last message
+          const { data: lastMsgData } = await supabase
+            .from('messages')
+            .select('content, sender_id')
+            .eq('conversation_id', conv.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+          const lastMessage = lastMsgData
+            ? (lastMsgData.sender_id === user.id ? `Tú: ${lastMsgData.content}` : lastMsgData.content)
+            : 'Sin mensajes aún';
+
+          // Unread count
+          const { count } = await supabase
+            .from('messages')
+            .select('id', { count: 'exact', head: true })
+            .eq('conversation_id', conv.id)
+            .eq('receiver_id', user.id)
+            .eq('read', false);
+
+          return {
+            id: conv.id,
+            updated_at: conv.updated_at,
+            otherName,
+            otherAvatar,
+            lastMessage,
+            unreadCount: count || 0,
+            participants: [conv.participant_1, conv.participant_2].filter(Boolean),
+          };
+        })
+      );
+
+      setConversations(enriched);
     } catch (err) {
       console.error('Error fetching conversations:', err);
     }
@@ -60,45 +136,32 @@ export default function MessagesScreen() {
     }
   };
 
-  const ConversationCard = ({ conversation }: { conversation: any }) => {
-    // Get other participant info (mock for now)
-    const otherName = 'Usuario';
-    const otherAvatar = null;
-    const lastMessage = 'No hay mensajes';
-    const unreadCount = 0;
-
-    return (
-      <TouchableOpacity
-        style={styles.conversationCard}
-        onPress={() => router.push(`/(worker)/messages/${conversation.id}`)}
-      >
-        <Avatar
-          source={otherAvatar}
-          name={otherName}
-          size={50}
-          online={Math.random() > 0.5}
-        />
-        <View style={styles.conversationInfo}>
-          <View style={styles.conversationHeader}>
-            <Text style={[styles.conversationName, { color: theme.colors.text }]}>
-              {otherName}
-            </Text>
-            <Text style={[styles.conversationTime, { color: theme.colors.textSecondary }]}>
-              {formatTime(conversation.updated_at)}
-            </Text>
-          </View>
-          <View style={styles.conversationFooter}>
-            <Text style={[styles.lastMessage, { color: theme.colors.textSecondary }]} numberOfLines={1}>
-              {lastMessage}
-            </Text>
-            {unreadCount > 0 && (
-              <Badge text={unreadCount.toString()} variant="error" size="sm" />
-            )}
-          </View>
+  const ConversationCard = ({ conversation }: { conversation: EnrichedConversation }) => (
+    <TouchableOpacity
+      style={styles.conversationCard}
+      onPress={() => router.push(`/(worker)/messages/${conversation.id}`)}
+    >
+      <Avatar source={conversation.otherAvatar} name={conversation.otherName} size={50} />
+      <View style={styles.conversationInfo}>
+        <View style={styles.conversationHeader}>
+          <Text style={[styles.conversationName, { color: theme.colors.text }]}>
+            {conversation.otherName}
+          </Text>
+          <Text style={[styles.conversationTime, { color: theme.colors.textSecondary }]}>
+            {formatTime(conversation.updated_at)}
+          </Text>
         </View>
-      </TouchableOpacity>
-    );
-  };
+        <View style={styles.conversationFooter}>
+          <Text style={[styles.lastMessage, { color: theme.colors.textSecondary }]} numberOfLines={1}>
+            {conversation.lastMessage}
+          </Text>
+          {conversation.unreadCount > 0 && (
+            <Badge text={conversation.unreadCount.toString()} variant="error" size="sm" />
+          )}
+        </View>
+      </View>
+    </TouchableOpacity>
+  );
 
   return (
     <View style={[styles.container, { backgroundColor: theme.colors.background }]}>

@@ -79,13 +79,15 @@ export default function TalentProfileScreen() {
   const startChat = async () => {
     if (!worker || !companyProfile) return;
 
-    // Create or get conversation
+    // Create or get conversation — check both participant orderings
     const { data: existing } = await supabase
       .from('conversations')
       .select('*')
-      .eq('participant_1', companyProfile.user_id)
-      .eq('participant_2', worker.user_id)
-      .single();
+      .or(
+        `and(participant_1.eq.${companyProfile.user_id},participant_2.eq.${worker.user_id}),` +
+        `and(participant_1.eq.${worker.user_id},participant_2.eq.${companyProfile.user_id})`
+      )
+      .maybeSingle();
 
     if (existing) {
       router.push(`/(company)/messages/${existing.id}`);

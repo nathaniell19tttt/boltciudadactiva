@@ -54,7 +54,6 @@ export function Screen({ children, style, scroll, loading, error }: ScreenProps)
           </View>
         ) : error ? (
           <View style={styles.centerContent}>
-            <ActivityIndicator size="large" color={theme.colors.error[500]} />
             <Text style={styles.errorText}>{error}</Text>
           </View>
         ) : (
