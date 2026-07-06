@@ -1,43 +1,48 @@
 import { useState } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, Dimensions, Image } from 'react-native';
 import { useRouter, Slot } from 'expo-router';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import WorkerTutorial from '@/components/tutorial/WorkerTutorial';
 import { DemoAlert } from '@/components/ui/DemoAlert';
-import { Hop as Home, Briefcase, FileText, GraduationCap, Calendar, Recycle, Users, MessageCircle, User, Settings, LogOut, Bell, Menu, X, ChevronRight, Moon, Sun, Eye } from 'lucide-react-native';
+import { Hop as Home, Briefcase, GraduationCap, Calendar, Recycle, Users, MessageCircle, User, Bell, Menu, X, Eye } from 'lucide-react-native';
 import { useTheme } from '@/contexts';
 import { useAuth } from '@/contexts';
 import { useDemo } from '@/contexts/DemoContext';
 import { useNotifications } from '@/hooks';
-import { Avatar, Badge } from '@/components/ui';
-import { Spacing } from '@/constants';
+import { Avatar } from '@/components/ui';
 
 const { width } = Dimensions.get('window');
+const SIDEBAR_WIDTH = 260;
+
+const BLUE_DARK = '#173A7A';
+const BLUE_MID = '#1E4D9B';
+const ORANGE = '#FF8A00';
+const WHITE = '#FFFFFF';
 
 const menuItems = [
   { id: 'home', label: 'Inicio', icon: Home, route: '/(worker)' },
   { id: 'jobs', label: 'Empleos', icon: Briefcase, route: '/(worker)/jobs' },
-  { id: 'applications', label: 'Mis Postulaciones', icon: FileText, route: '/(worker)/applications', requiresAuth: true },
   { id: 'courses', label: 'Capacitaciones', icon: GraduationCap, route: '/(worker)/courses' },
   { id: 'events', label: 'Eventos', icon: Calendar, route: '/(worker)/events' },
   { id: 'recycling', label: 'Reciclaje', icon: Recycle, route: '/(worker)/recycling' },
   { id: 'community', label: 'Apoyo Comunitario', icon: Users, route: '/(worker)/community' },
   { id: 'messages', label: 'Mensajes', icon: MessageCircle, route: '/(worker)/messages', requiresAuth: true },
-];
-
-const accountItems = [
-  { id: 'profile', label: 'Mi Perfil', icon: User, route: '/(worker)/profile', requiresAuth: true },
-  { id: 'settings', label: 'Configuración', icon: Settings, route: '/(worker)/settings', requiresAuth: true },
+  { id: 'profile', label: 'Perfil', icon: User, route: '/(worker)/profile', requiresAuth: true },
 ];
 
 export default function WorkerLayout() {
   const router = useRouter();
-  const { theme, isDark, toggleTheme } = useTheme();
+  const { theme } = useTheme();
   const { user, profile, signOut } = useAuth();
   const { isDemo, isDevMode, exitDemoMode, showDemoAlert } = useDemo();
   const { unreadCount } = useNotifications();
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [currentRoute, setCurrentRoute] = useState('/(worker)');
+
+  const workerProfile = profile as any;
+  const displayName = (isDemo || isDevMode) ? 'Usuario Demo' : (workerProfile ? `${workerProfile.first_name || ''} ${workerProfile.last_name || ''}`.trim() : 'Usuario');
+  const displayEmail = (isDemo || isDevMode) ? 'demo@ejemplo.com' : (user?.email ?? '');
+  const displayPhoto = (isDemo || isDevMode) ? null : workerProfile?.photo_url;
 
   const handleNavigate = (route: string, requiresAuth?: boolean) => {
     if (isDemo && requiresAuth && !isDevMode) {
@@ -60,223 +65,138 @@ export default function WorkerLayout() {
     router.replace('/welcome');
   };
 
-  const getGreeting = () => {
-    const hour = new Date().getHours();
-    if (hour < 12) return 'Buenos días';
-    if (hour < 18) return 'Buenas tardes';
-    return 'Buenas noches';
-  };
-
-  const workerProfile = profile as any;
-
-  // Demo mode mock data
-  const displayName = (isDemo || isDevMode) ? 'Usuario Demo' : (workerProfile?.first_name || 'Usuario');
-  const displayEmail = (isDemo || isDevMode) ? 'demo@ejemplo.com' : user?.email;
-  const displayPhoto = (isDemo || isDevMode) ? null : workerProfile?.photo_url;
-
-  const DrawerContent = () => (
-    <View style={[styles.drawer, { backgroundColor: theme.colors.background }]}>
-      {/* Drawer Header */}
-      <View style={[styles.drawerHeader, { backgroundColor: theme.colors.primary[500] }]}>
-        <TouchableOpacity
-          style={styles.closeButton}
-          onPress={() => setDrawerOpen(false)}
-        >
-          <X size={24} color="#FFFFFF" />
-        </TouchableOpacity>
-
-        {/* Demo Badge */}
-        {(isDemo || isDevMode) && (
-          <View style={styles.demoBadge}>
-            <Eye size={12} color="#FFFFFF" />
-            <Text style={styles.demoBadgeText}>{isDevMode ? 'MODO DEV' : 'MODO DEMO'}</Text>
-          </View>
-        )}
-
-        <View style={styles.drawerProfile}>
-          <Avatar
-            source={displayPhoto}
-            name={(isDemo || isDevMode) ? 'Demo' : (workerProfile ? `${workerProfile.first_name} ${workerProfile.last_name}` : user?.email)}
-            size={60}
+  const SidebarContent = () => (
+    <View style={styles.sidebar}>
+      {/* Logo area */}
+      <View style={styles.sidebarLogo}>
+        <View style={styles.logoCircle}>
+          <Image
+            source={require('../../assets/images/logo-ciudad-activa.png')}
+            style={styles.logoImage}
+            resizeMode="contain"
           />
-          <View style={styles.drawerProfileInfo}>
-            <Text style={styles.drawerName}>{displayName}</Text>
-            <Text style={styles.drawerEmail}>{displayEmail}</Text>
-          </View>
         </View>
+        <View style={styles.logoTextContainer}>
+          <Text style={styles.logoTitle}>Ciudad</Text>
+          <Text style={styles.logoSubtitle}>Activa</Text>
+          <Text style={styles.logoRole}>TRABAJADOR</Text>
+        </View>
+        {drawerOpen && (
+          <TouchableOpacity onPress={() => setDrawerOpen(false)} style={styles.closeBtn}>
+            <X size={20} color="rgba(255,255,255,0.7)" />
+          </TouchableOpacity>
+        )}
       </View>
 
-      {/* Drawer Menu */}
-      <ScrollView style={styles.drawerMenu}>
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          NAVEGACIÓN
-        </Text>
-        {menuItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.menuItem,
-              currentRoute === item.route && { backgroundColor: theme.colors.primary[50] },
-            ]}
-            onPress={() => handleNavigate(item.route, item.requiresAuth)}
-          >
-            <item.icon
-              size={22}
-              color={currentRoute === item.route ? theme.colors.primary[500] : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.menuLabel,
-                { color: currentRoute === item.route ? theme.colors.primary[500] : theme.colors.text },
-              ]}
+      {/* Demo/Dev badge */}
+      {(isDemo || isDevMode) && (
+        <View style={styles.demoBadgeContainer}>
+          <Eye size={12} color={WHITE} />
+          <Text style={styles.demoBadgeText}>{isDevMode ? 'MODO DEV' : 'MODO DEMO'}</Text>
+        </View>
+      )}
+
+      {/* Menu items */}
+      <ScrollView style={styles.menuScroll} showsVerticalScrollIndicator={false}>
+        {menuItems.map((item) => {
+          const active = currentRoute === item.route;
+          return (
+            <TouchableOpacity
+              key={item.id}
+              style={[styles.menuItem, active && styles.menuItemActive]}
+              onPress={() => handleNavigate(item.route, item.requiresAuth)}
+              activeOpacity={0.75}
             >
-              {item.label}
-            </Text>
-            {item.requiresAuth && isDemo && !isDevMode && (
-              <View style={styles.lockIcon}>
-                <Text style={styles.lockIconText}>🔒</Text>
-              </View>
-            )}
-            {item.id === 'messages' && unreadCount > 0 && !isDemo && !isDevMode && (
-              <Badge text={unreadCount.toString()} variant="error" size="sm" />
-            )}
-            <ChevronRight size={18} color={theme.colors.textTertiary} />
-          </TouchableOpacity>
-        ))}
+              <item.icon
+                size={20}
+                color={active ? WHITE : 'rgba(255,255,255,0.72)'}
+              />
+              <Text style={[styles.menuLabel, active && styles.menuLabelActive]}>
+                {item.label}
+              </Text>
+              {item.id === 'messages' && unreadCount > 0 && !isDemo && !isDevMode && (
+                <View style={styles.unreadDot}>
+                  <Text style={styles.unreadText}>{unreadCount}</Text>
+                </View>
+              )}
+            </TouchableOpacity>
+          );
+        })}
 
-        <Text style={[styles.sectionLabel, { color: theme.colors.textSecondary }]}>
-          CUENTA
-        </Text>
-        {accountItems.map((item) => (
-          <TouchableOpacity
-            key={item.id}
-            style={[
-              styles.menuItem,
-              currentRoute === item.route && { backgroundColor: theme.colors.primary[50] },
-            ]}
-            onPress={() => handleNavigate(item.route, item.requiresAuth)}
-          >
-            <item.icon
-              size={22}
-              color={currentRoute === item.route ? theme.colors.primary[500] : theme.colors.textSecondary}
-            />
-            <Text
-              style={[
-                styles.menuLabel,
-                { color: currentRoute === item.route ? theme.colors.primary[500] : theme.colors.text },
-              ]}
-            >
-              {item.label}
-            </Text>
-            {item.requiresAuth && isDemo && !isDevMode && (
-              <View style={styles.lockIcon}>
-                <Text style={styles.lockIconText}>🔒</Text>
-              </View>
-            )}
-            <ChevronRight size={18} color={theme.colors.textTertiary} />
-          </TouchableOpacity>
-        ))}
+        <View style={styles.menuDivider} />
 
-        {/* Theme Toggle */}
-        <TouchableOpacity
-          style={styles.menuItem}
-          onPress={toggleTheme}
-        >
-          {isDark ? (
-            <Sun size={22} color={theme.colors.textSecondary} />
-          ) : (
-            <Moon size={22} color={theme.colors.textSecondary} />
-          )}
-          <Text style={[styles.menuLabel, { color: theme.colors.text }]}>
-            {isDark ? 'Modo claro' : 'Modo oscuro'}
-          </Text>
-        </TouchableOpacity>
-
-        {/* Sign Out */}
-        <TouchableOpacity
-          style={[styles.menuItem, styles.signOutButton]}
-          onPress={handleSignOut}
-        >
-          <LogOut size={22} color={theme.colors.error[500]} />
-          <Text style={[styles.menuLabel, { color: theme.colors.error[500] }]}>
-            {(isDemo || isDevMode) ? 'Salir del modo demo' : 'Cerrar sesión'}
+        {/* Sign out */}
+        <TouchableOpacity style={styles.menuItem} onPress={handleSignOut} activeOpacity={0.75}>
+          <User size={20} color="rgba(255,255,255,0.5)" />
+          <Text style={[styles.menuLabel, { color: 'rgba(255,255,255,0.5)' }]}>
+            {(isDemo || isDevMode) ? 'Salir del modo' : 'Cerrar sesión'}
           </Text>
         </TouchableOpacity>
       </ScrollView>
 
-      {/* Drawer Footer */}
-      <View style={[styles.drawerFooter, { borderColor: theme.colors.border }]}>
-        <Text style={[styles.footerText, { color: theme.colors.textTertiary }]}>
-          Ciudad Activa v2.0
-        </Text>
+      {/* User card at bottom */}
+      <View style={styles.userCard}>
+        <Avatar
+          source={displayPhoto}
+          name={displayName || 'U'}
+          size={40}
+        />
+        <View style={styles.userCardInfo}>
+          <Text style={styles.userCardName} numberOfLines={1}>{displayName || 'Usuario'}</Text>
+          <Text style={styles.userCardEmail} numberOfLines={1}>{displayEmail}</Text>
+        </View>
       </View>
     </View>
   );
 
   return (
     <SafeAreaProvider>
-      <SafeAreaView style={[styles.container, { backgroundColor: theme.colors.background }]} edges={['top']}>
-        {/* Demo Mode Banner - Only show in demo mode, not dev mode */}
-        {isDemo && !isDevMode && (
-          <View style={styles.demoBanner}>
-            <Eye size={14} color="#FFFFFF" />
-            <Text style={styles.demoBannerText}>Modo demostración - Algunas acciones requieren registro</Text>
-          </View>
-        )}
-
+      <SafeAreaView style={styles.container} edges={['top']}>
         {/* Dev Mode Banner */}
         {isDevMode && (
-          <View style={[styles.devBanner, { backgroundColor: '#FF6B6B' }]}>
-            <Text style={styles.devBannerText}>MODO DESARROLLO - Acceso completo habilitado</Text>
+          <View style={styles.devBanner}>
+            <Text style={styles.devBannerText}>MODO DESARROLLO — Acceso completo habilitado</Text>
           </View>
         )}
 
-        {/* Header */}
-        <View style={[styles.header, { backgroundColor: theme.colors.background }]}>
-          <TouchableOpacity
-            style={styles.menuButton}
-            onPress={() => setDrawerOpen(true)}
-          >
-            <Menu size={24} color={theme.colors.text} />
-          </TouchableOpacity>
-
-          <Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-            Ciudad Activa
-          </Text>
-
-          <TouchableOpacity
-            style={styles.notificationButton}
-            onPress={() => router.push('/(worker)/notifications')}
-          >
-            <Bell size={24} color={theme.colors.text} />
-            {unreadCount > 0 && !isDemo && !isDevMode && (
-              <View style={[styles.badgeDot, { backgroundColor: theme.colors.error[500] }]}>
-                <Text style={styles.badgeText}>{unreadCount}</Text>
+        <View style={styles.body}>
+          {/* Sidebar overlay (mobile) */}
+          {drawerOpen && (
+            <TouchableOpacity
+              style={styles.overlay}
+              onPress={() => setDrawerOpen(false)}
+              activeOpacity={1}
+            >
+              <View style={styles.sidebarContainer}>
+                <SidebarContent />
               </View>
-            )}
-          </TouchableOpacity>
+            </TouchableOpacity>
+          )}
+
+          {/* Main content */}
+          <View style={styles.mainContent}>
+            {/* Top mini-header for hamburger on mobile */}
+            <View style={styles.topBar}>
+              <TouchableOpacity onPress={() => setDrawerOpen(true)} style={styles.hamburger}>
+                <Menu size={22} color={BLUE_DARK} />
+              </TouchableOpacity>
+              <Text style={styles.topBarTitle}>Ciudad Activa</Text>
+              <TouchableOpacity
+                style={styles.topBarBell}
+                onPress={() => router.push('/(worker)/notifications')}
+              >
+                <Bell size={22} color={BLUE_DARK} />
+                {unreadCount > 0 && !isDemo && !isDevMode && (
+                  <View style={styles.bellDot} />
+                )}
+              </TouchableOpacity>
+            </View>
+
+            <Slot />
+          </View>
         </View>
 
-        {/* Drawer Overlay */}
-        {drawerOpen && (
-          <TouchableOpacity
-            style={styles.overlay}
-            onPress={() => setDrawerOpen(false)}
-            activeOpacity={1}
-          >
-            <View style={styles.drawerContainer}>
-              <DrawerContent />
-            </View>
-          </TouchableOpacity>
-        )}
-
-        {/* Main Content - Child routes render here */}
-        <Slot />
-
-        {/* First-time tutorial */}
         {user && !isDemo && !isDevMode && <WorkerTutorial userId={user.id} />}
-
-        {/* Demo Alert Modal */}
         <DemoAlert />
       </SafeAreaView>
     </SafeAreaProvider>
@@ -286,75 +206,22 @@ export default function WorkerLayout() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-  },
-  demoBanner: {
-    backgroundColor: '#7B1FA2',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 6,
-    paddingHorizontal: 12,
-    gap: 6,
-  },
-  demoBannerText: {
-    color: '#FFFFFF',
-    fontSize: 12,
-    fontWeight: '500',
+    backgroundColor: '#F5F7FB',
   },
   devBanner: {
-    flexDirection: 'row',
+    backgroundColor: '#FF6B6B',
+    paddingVertical: 6,
     alignItems: 'center',
-    justifyContent: 'center',
-    paddingVertical: 8,
-    paddingHorizontal: 12,
   },
   devBannerText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+    color: WHITE,
+    fontSize: 11,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  header: {
+  body: {
+    flex: 1,
     flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: Spacing.base,
-    paddingVertical: Spacing.md,
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(0,0,0,0.05)',
-  },
-  menuButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  headerTitle: {
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  notificationButton: {
-    width: 44,
-    height: 44,
-    justifyContent: 'center',
-    alignItems: 'center',
-    position: 'relative',
-  },
-  badgeDot: {
-    position: 'absolute',
-    top: 8,
-    right: 8,
-    minWidth: 18,
-    height: 18,
-    borderRadius: 9,
-    justifyContent: 'center',
-    alignItems: 'center',
-    paddingHorizontal: 4,
-  },
-  badgeText: {
-    color: '#FFFFFF',
-    fontSize: 11,
-    fontWeight: '700',
   },
   overlay: {
     position: 'absolute',
@@ -362,110 +229,188 @@ const styles = StyleSheet.create({
     left: 0,
     right: 0,
     bottom: 0,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(0,0,0,0.45)',
     zIndex: 100,
   },
-  drawerContainer: {
-    width: width * 0.8,
-    maxWidth: 320,
+  sidebarContainer: {
+    width: SIDEBAR_WIDTH,
     height: '100%',
   },
-  drawer: {
+  sidebar: {
     flex: 1,
-    borderTopRightRadius: Spacing.radius['2xl'],
-    borderBottomRightRadius: Spacing.radius['2xl'],
-    overflow: 'hidden',
+    backgroundColor: BLUE_DARK,
+    paddingTop: 20,
   },
-  drawerHeader: {
-    padding: Spacing.lg,
-    paddingTop: Spacing['2xl'],
-  },
-  closeButton: {
-    position: 'absolute',
-    top: Spacing.lg,
-    right: Spacing.lg,
-    width: 32,
-    height: 32,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  demoBadge: {
-    position: 'absolute',
-    top: Spacing.lg,
-    left: Spacing.lg,
+  sidebarLogo: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: 'rgba(255,255,255,0.2)',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: 'rgba(255,255,255,0.12)',
+    marginBottom: 8,
+  },
+  logoCircle: {
+    width: 42,
+    height: 42,
+    borderRadius: 10,
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    overflow: 'hidden',
+  },
+  logoImage: {
+    width: 36,
+    height: 36,
+  },
+  logoTextContainer: {
+    flex: 1,
+    marginLeft: 10,
+  },
+  logoTitle: {
+    color: WHITE,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  logoSubtitle: {
+    color: ORANGE,
+    fontSize: 14,
+    fontWeight: '800',
+    lineHeight: 17,
+  },
+  logoRole: {
+    color: 'rgba(255,255,255,0.55)',
+    fontSize: 9,
+    fontWeight: '600',
+    letterSpacing: 1,
+    marginTop: 2,
+  },
+  closeBtn: {
+    padding: 4,
+  },
+  demoBadgeContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    marginHorizontal: 16,
+    marginBottom: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 5,
     borderRadius: 8,
-    gap: 4,
+    gap: 6,
   },
   demoBadgeText: {
-    color: '#FFFFFF',
+    color: WHITE,
     fontSize: 10,
     fontWeight: '700',
     letterSpacing: 0.5,
   },
-  drawerProfile: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: Spacing.lg,
-  },
-  drawerProfileInfo: {
-    marginLeft: Spacing.md,
-  },
-  drawerName: {
-    color: '#FFFFFF',
-    fontSize: 18,
-    fontWeight: '700',
-  },
-  drawerEmail: {
-    color: 'rgba(255,255,255,0.8)',
-    fontSize: 13,
-    marginTop: 2,
-  },
-  drawerMenu: {
+  menuScroll: {
     flex: 1,
-    paddingVertical: Spacing.md,
-  },
-  sectionLabel: {
-    fontSize: 11,
-    fontWeight: '600',
-    letterSpacing: 1,
-    paddingHorizontal: Spacing.lg,
-    paddingVertical: Spacing.md,
+    paddingTop: 8,
   },
   menuItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: Spacing.md,
-    paddingHorizontal: Spacing.lg,
+    paddingVertical: 12,
+    paddingHorizontal: 18,
+    marginHorizontal: 10,
+    borderRadius: 10,
+    marginBottom: 2,
+    gap: 12,
+  },
+  menuItemActive: {
+    backgroundColor: ORANGE,
   },
   menuLabel: {
     flex: 1,
-    marginLeft: Spacing.md,
-    fontSize: 15,
+    fontSize: 14,
+    fontWeight: '500',
+    color: 'rgba(255,255,255,0.72)',
   },
-  lockIcon: {
-    marginRight: 4,
+  menuLabelActive: {
+    color: WHITE,
+    fontWeight: '700',
   },
-  lockIconText: {
+  unreadDot: {
+    backgroundColor: '#EF4444',
+    minWidth: 18,
+    height: 18,
+    borderRadius: 9,
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 4,
+  },
+  unreadText: {
+    color: WHITE,
     fontSize: 10,
+    fontWeight: '700',
   },
-  signOutButton: {
-    marginTop: Spacing.md,
-    paddingTop: Spacing.lg,
-    paddingBottom: Spacing.xl,
+  menuDivider: {
+    height: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    marginHorizontal: 18,
+    marginVertical: 8,
+  },
+  userCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 18,
+    paddingVertical: 16,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(0,0,0,0.05)',
+    borderTopColor: 'rgba(255,255,255,0.1)',
+    gap: 10,
   },
-  drawerFooter: {
-    padding: Spacing.lg,
-    borderTopWidth: 1,
+  userCardInfo: {
+    flex: 1,
   },
-  footerText: {
+  userCardName: {
+    color: WHITE,
+    fontSize: 13,
+    fontWeight: '700',
+  },
+  userCardEmail: {
+    color: 'rgba(255,255,255,0.55)',
     fontSize: 11,
-    textAlign: 'center',
+    marginTop: 1,
+  },
+  mainContent: {
+    flex: 1,
+    backgroundColor: '#F5F7FB',
+  },
+  topBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: WHITE,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  hamburger: {
+    padding: 6,
+    marginRight: 8,
+  },
+  topBarTitle: {
+    flex: 1,
+    fontSize: 17,
+    fontWeight: '700',
+    color: BLUE_DARK,
+  },
+  topBarBell: {
+    padding: 6,
+    position: 'relative',
+  },
+  bellDot: {
+    position: 'absolute',
+    top: 6,
+    right: 6,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#EF4444',
+    borderWidth: 1.5,
+    borderColor: WHITE,
   },
 });
