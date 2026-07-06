@@ -79,7 +79,13 @@ export default function VerifyEmailScreen() {
       });
 
       if (verifyError) {
-        setError('Código incorrecto o expirado. Intenta de nuevo.');
+        if (verifyError.message.includes('expired') || verifyError.message.includes('OTP expired')) {
+          setError('El codigo ha expirado. Solicita uno nuevo.');
+        } else if (verifyError.message.includes('invalid') || verifyError.message.includes('incorrect')) {
+          setError('Codigo incorrecto. Intenta de nuevo.');
+        } else {
+          setError(verifyError.message);
+        }
         return;
       }
 
