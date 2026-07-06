@@ -22,6 +22,7 @@ export default function RootLayout() {
           <Stack.Screen name="company-signup-profile" />
           <Stack.Screen name="terms" />
           <Stack.Screen name="privacy" />
+          <Stack.Screen name="explore" />
           <Stack.Screen name="forgot-password" />
           <Stack.Screen name="reset-password" />
           <Stack.Screen name="auth/callback" />

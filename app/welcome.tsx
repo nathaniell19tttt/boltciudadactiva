@@ -136,7 +136,7 @@ export default function WelcomeScreen() {
             <PressableButton
               label="Explorar información"
               variant="outline"
-              onPress={() => router.push('/(worker)')}
+              onPress={() => router.push('/explore')}
             />
           </Animated.View>
         </View>
